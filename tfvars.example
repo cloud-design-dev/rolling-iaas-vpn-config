@@ -1,0 +1,4 @@
+sm_instance_name = ""
+vpn_key_secret_id = ""
+vpn_cert_secret_id = ""
+ibmcloud_api_key = ""
