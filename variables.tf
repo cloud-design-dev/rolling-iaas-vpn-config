@@ -21,17 +21,22 @@ variable "resource_group" {
   default     = "CDE"
 }
 
-variable "vpn_cert_secret_id" {
-  description = "Secret ID of the VPN certificate"
+variable "basename" {
+  description = "Prefix for all resources created by the template"
   type        = string
 }
 
-variable "vpn_key_secret_id" {
-  description = "Secret ID of the VPN certificate"
-  type        = string
-}
+# variable "vpn_cert_secret_id" {
+#   description = "Secret ID of the VPN certificate"
+#   type        = string
+# }
 
-variable "sm_instance_name" {
-  description = "Name of the Secrets Manager instance"
-  type        = string
-}
+# variable "vpn_key_secret_id" {
+#   description = "Secret ID of the VPN certificate"
+#   type        = string
+# }
+
+# variable "sm_instance_name" {
+#   description = "Name of the Secrets Manager instance"
+#   type        = string
+# }

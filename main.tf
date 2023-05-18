@@ -4,43 +4,113 @@ module "resource_group" {
   existing_resource_group_name = var.resource_group
 }
 
-data "ibm_is_vpn_server" "tor" {
-  name = var.vpn_server_name
-}
+module "pki" {
+  source  = "particuleio/pki/tls"
+  version = "2.0.0"
 
-data "ibm_resource_instance" "sm_instance" {
-  name              = var.sm_instance_name
-  location          = var.region
-  resource_group_id = module.resource_group.resource_group_id
-}
+  ca = {
+    algorithm   = "RSA"
+    ecdsa_curve = "secp384r1"
+    subject = {
+      common_name         = "${var.basename} CA"
+      organization        = "Org"
+      organizational_unit = "OU"
+      street_address = [
+        "Street"
+      ]
+      locality      = "Locality"
+      province      = "Province"
+      country       = "Country"
+      postal_code   = "Postal Code"
+      serial_number = "Serial Number"
+    }
+    validity_period_hours = 87600
+    early_renewal_hours   = 78840
+    allowed_uses = [
+      "cert_signing",
+      "crl_signing",
+      "code_signing",
+      "server_auth",
+      "client_auth",
+      "digital_signature",
+      "key_encipherment",
+    ]
+  }
 
-data "ibm_is_vpn_server_client_configuration" "client" {
-  vpn_server = data.ibm_is_vpn_server.tor.id
-}
+  certificates = {
+    server = {
+      algorithm   = "RSA"
+      ecdsa_curve = "secp384r1"
+      subject = {
+        common_name         = "${var.basename} Server"
+        organization        = "Org"
+        organizational_unit = "OU"
+        street_address = [
+          "Street"
+        ]
+        locality      = "Locality"
+        province      = "Province"
+        country       = "Country"
+        postal_code   = "Postal Code"
+        serial_number = "Serial Number"
+      }
+      validity_period_hours = 8740
+      early_renewal_hours   = 8040
+      dns_names = [
+        "vpn-server.vpn.ibm.com"
+      ]
+      uris = []
+      allowed_uses = [
+        "server_auth",
+        "client_auth",
+        "digital_signature",
+      ]
+    }
 
-data "ibm_sm_arbitrary_secret" "vpn_cert" {
-  instance_id = data.ibm_resource_instance.sm_instance.guid
-  region      = var.region
-  secret_id   = var.vpn_cert_secret_id
-}
-
-data "ibm_sm_arbitrary_secret" "vpn_key" {
-  instance_id = data.ibm_resource_instance.sm_instance.guid
-  region      = var.region
-  secret_id   = var.vpn_key_secret_id
+    client = {
+      algorithm   = "RSA"
+      ecdsa_curve = "secp384r1"
+      subject = {
+        common_name         = "${var.basename} Client"
+        organization        = "Org"
+        organizational_unit = "OU"
+        street_address = [
+          "Street"
+        ]
+        locality      = "Locality"
+        province      = "Province"
+        country       = "Country"
+        postal_code   = "Postal Code"
+        serial_number = "Serial Number"
+      }
+      validity_period_hours = 8740
+      early_renewal_hours   = 8040
+      dns_names = [
+        "vpn-client.vpn.ibm.com"
+      ]
+      uris = []
+      allowed_uses = [
+        "server_auth",
+        "client_auth",
+        "digital_signature",
+      ]
+    }
+  }
 }
 
 resource "local_file" "fullconfig" {
-  content  = <<EOT
+  depends_on = [module.pki]
+  content    = <<EOT
 ${data.ibm_is_vpn_server_client_configuration.client.vpn_server_client_configuration}
 
 <cert>
-${data.ibm_sm_arbitrary_secret.vpn_cert.payload}
+${module.pki.certificates["client"].cert.cert_pem}
 </cert>
 
 <key>
-${data.ibm_sm_arbitrary_secret.vpn_key.payload}
+${module.pki.certificates["client"].private_key.private_key_pem}
 </key>
-EOT
-  filename = "./client-full.ovpn"
+
+ EOT
+  filename   = "./config/client-data-source.ovpn"
 }
